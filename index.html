@@ -16,7 +16,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #fire:active{background:#ff5c5c;color:#fff}
 #thr{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 101px);width:110px;height:4px;border-radius:5px;background:rgba(255,255,255,.24);pointer-events:none;overflow:hidden}
 #thr i{display:block;height:100%;background:var(--amber);width:40%}
-#topbar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;right:108px;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:rgba(7,24,43,.44);backdrop-filter:blur(8px);pointer-events:none;text-shadow:0 1px 4px #19324b}
+#topbar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;right:132px;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;background:rgba(7,24,43,.44);backdrop-filter:blur(8px);pointer-events:none;text-shadow:0 1px 4px #19324b}
 #score{color:#fff;font:700 16px ui-monospace,Menlo,monospace}
 #stats{color:#f4e4c4;font:600 11px ui-monospace,Menlo,monospace;text-align:right;white-space:nowrap}
 #crash{position:fixed;inset:0;background:rgba(255,80,50,.4);display:none;align-items:center;justify-content:center;font-size:28px;font-weight:700}
@@ -29,9 +29,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #reticle:before,#reticle:after{content:'';position:absolute;background:rgba(255,255,255,.85)}
 #reticle:before{width:10px;height:1px;left:16px;top:21px}#reticle:after{width:1px;height:10px;left:21px;top:16px}
 #reticle.hit{border-color:#ffc266;box-shadow:0 0 26px #ff8a3d}
+#reticle.lock{border-color:#ffce87;box-shadow:0 0 10px rgba(255,194,102,.35)}
 #armor{position:fixed;top:calc(env(safe-area-inset-top,0px) + 58px);left:17px;padding:6px 10px;border-radius:8px;background:rgba(7,24,43,.44);color:#ffd38d;font:700 13px ui-monospace,monospace;letter-spacing:2px;text-shadow:0 1px 4px #142d4d}
+#heal{font:500 10px ui-monospace,monospace;letter-spacing:0;color:#e9f3f4;margin-top:3px}
 #pause,#view{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);width:40px;height:40px;border:1px solid rgba(255,255,255,.42);border-radius:10px;background:rgba(7,24,43,.48);backdrop-filter:blur(8px);color:white;font-size:17px}
-#pause{right:12px}#view{right:58px;font-size:19px}
+#pause{right:12px}#view{right:58px;width:64px;font-size:13px;font-weight:700}
+#missile{position:fixed;right:21px;bottom:calc(env(safe-area-inset-bottom,0px) + 99px);width:62px;height:62px;border-radius:50%;border:1px solid #ffd499;background:rgba(77,54,28,.75);color:#fff1d8;font:700 12px -apple-system,"PingFang TC",sans-serif;backdrop-filter:blur(8px)}
+#missile:disabled{border-color:rgba(211,221,226,.45);background:rgba(13,30,43,.52);color:#b8c7cb;opacity:.75}
+#missile.locked{box-shadow:0 0 13px rgba(255,190,96,.58)}
 #cockpit{position:fixed;inset:0;pointer-events:none;display:none}
 #cockpit:before{content:'';position:absolute;left:50%;bottom:-94px;width:min(110vw,650px);height:210px;transform:translateX(-50%);border:9px solid rgba(34,45,55,.95);border-radius:50% 50% 0 0;background:linear-gradient(#374b5a,#13202c 65%);box-shadow:0 -4px 18px rgba(0,0,0,.36),inset 0 9px 14px rgba(255,255,255,.12)}
 #cockpit:after{content:'';position:absolute;left:50%;bottom:73px;width:22px;height:65px;transform:translateX(-50%);border-left:6px solid rgba(26,39,52,.8);border-right:6px solid rgba(26,39,52,.8);border-radius:8px 8px 0 0;opacity:.8}
@@ -42,7 +47,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #flash{position:fixed;inset:0;background:rgba(255,85,55,.33);opacity:0;pointer-events:none;transition:opacity .2s}
 .pop{position:absolute;color:#ffdc92;font:bold 22px ui-monospace,monospace;text-shadow:0 2px 8px #562a15;animation:pop .7s ease-out forwards}@keyframes pop{to{transform:translateY(-45px) scale(1.3);opacity:0}}
 #stick{position:fixed;width:98px;height:98px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.09);border-radius:50%;pointer-events:none;display:none;transform:translate(-50%,-50%)}#stick i{position:absolute;left:50%;top:50%;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.72);transform:translate(-50%,-50%)}
-#slow,#fast,#fire,#thr,#topbar,#armor,#view,#pause{z-index:3}#cockpit{z-index:1}#pausePanel,#ov{z-index:5}#crash{z-index:4}
+#slow,#fast,#fire,#missile,#thr,#topbar,#armor,#view,#pause{z-index:3}#cockpit{z-index:1}#pausePanel,#ov{z-index:5}#crash{z-index:4}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -52,15 +57,16 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <button class="btn" id="slow" hidden>減速</button>
 <button id="fire" hidden>射擊</button>
 <button class="btn" id="fast" hidden>加速</button>
+<button id="missile" hidden disabled aria-label="飛彈，尚未鎖定">飛彈 10</button>
 <div id="crash">墜海！重新起飛中</div>
 <div id="hud" hidden><div id="reticle"></div></div>
-<div id="armor" hidden></div><button id="view" hidden aria-label="切換視角" title="切換視角">◉</button><button id="pause" hidden aria-label="暫停">Ⅱ</button>
+<div id="armor" hidden><span id="shield"></span><div id="heal"></div></div><button id="view" hidden aria-label="切換座艙視角">座艙</button><button id="pause" hidden aria-label="暫停">Ⅱ</button>
 <div id="cockpit"><div class="dial"></div></div>
 <div id="pausePanel"><span>飛行暫停</span><button id="resume">繼續飛行</button></div><div id="flash"></div><div id="stick"><i></i></div>
 <div id="ov">
 <h1>海上戰鬥機</h1>
 <p>晴空萬里，海面上的空戰。手指拖曳螢幕：左右拖＝滾轉轉彎，上下拖＝拉升／俯衝，放開回正。</p>
-<p>左下減速、右下加速，中間射擊。右上可切換座艙視角。五格護甲用完或墜海時會重新起飛。</p>
+<p>左下減速、右下加速，中間射擊；鎖定前方敵機後可發射飛彈。右上切換座艙視角。五格護盾用完或墜海時重新起飛。</p>
 <button id="go">開始飛行</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -126,11 +132,28 @@ for(let k=0;k<12;k++){const j=buildJet(0xb23a3a,0x6b2323,0x331414);scene.add(j.g
 const bTex=new THREE.MeshBasicMaterial({color:0xff6a00,fog:false,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});
 const BUL=Array.from({length:30},()=>({mesh:new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,6,6),bTex),active:false,vel:new THREE.Vector3(),life:0}));
 BUL.forEach(b=>{b.mesh.visible=false;b.mesh.geometry.rotateX(Math.PI/2);scene.add(b.mesh)});
+const MISSILES=Array.from({length:10},()=>{
+ const mesh=new THREE.Group(),body=new THREE.MeshPhongMaterial({color:0xe2e5e4,specular:0xffffff,shininess:85}),tip=new THREE.MeshPhongMaterial({color:0x3c5363,shininess:65});
+ const tube=new THREE.Mesh(new THREE.CylinderGeometry(.17,.22,2.5,10),body);tube.rotation.x=Math.PI/2;mesh.add(tube);
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(.17,.7,10),tip);nose.rotation.x=Math.PI/2;nose.position.z=1.6;mesh.add(nose);
+ for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const fin=new THREE.Mesh(new THREE.BoxGeometry(.75,.045,.55),tip);fin.rotation.z=a;fin.position.z=-.95;mesh.add(fin)}
+ const exhaust=new THREE.Mesh(new THREE.SphereGeometry(.21,8,6),new THREE.MeshBasicMaterial({color:0x8ad8ff,transparent:true,opacity:.85,blending:THREE.AdditiveBlending,depthWrite:false}));exhaust.position.z=-1.5;mesh.add(exhaust);
+ mesh.visible=false;scene.add(mesh);return{mesh,active:false,heading:new THREE.Vector3(),target:null,life:0}
+});
 let score=0,cooldown=0,firing=false,paused=false,hitTimer=0;
 const sparks=[];const sparkGeo=new THREE.SphereGeometry(1,5,4),sparkMat=new THREE.MeshBasicMaterial({color:0xffb35c,transparent:true,depthWrite:false});
 function burst(pos,n=12){for(let i=0;i<n;i++){const mesh=new THREE.Mesh(sparkGeo,sparkMat);mesh.position.copy(pos);mesh.scale.setScalar(rr(.5,1.7));scene.add(mesh);sparks.push({mesh,vel:new THREE.Vector3(rr(-38,38),rr(-28,32),rr(-38,38)),life:rr(.25,.55)})}}
-function popScore(){const d=document.createElement('span');d.className='pop';d.textContent='+10';d.style.left=rr(44,56)+'%';d.style.top=rr(35,47)+'%';$('hud').appendChild(d);setTimeout(()=>d.remove(),750)}
-function updateArmor(){$('armor').textContent='護盾 '+ '◆'.repeat(st.hp)+'◇'.repeat(5-st.hp)}
+function popScore(points=10){const d=document.createElement('span');d.className='pop';d.textContent='+'+points;d.style.left=rr(44,56)+'%';d.style.top=rr(35,47)+'%';$('hud').appendChild(d);setTimeout(()=>d.remove(),750)}
+function updateArmor(){$('shield').textContent='護盾 '+ '◆'.repeat(st.hp)+'◇'.repeat(5-st.hp)}
+function updateAmmo(){const button=$('missile'),target=lockEnemy();button.textContent='飛彈 '+st.ammo;button.disabled=st.ammo<=0||!target||st.crash>0;button.classList.toggle('locked',!!target&&st.ammo>0&&st.crash<=0);button.setAttribute('aria-label',button.disabled?(st.ammo?'飛彈，尚未鎖定':'飛彈用完'):'發射飛彈，剩餘'+st.ammo+'發');$('reticle').classList.toggle('lock',!!target&&st.ammo>0);return target}
+function lockEnemy(){const forward=new THREE.Vector3(-Math.sin(st.yaw)*Math.cos(st.pitch),Math.sin(st.pitch),-Math.cos(st.yaw)*Math.cos(st.pitch));let best=null,bestDist=850;
+ for(const e of EN){const delta=new THREE.Vector3().subVectors(e.group.position,P),dist=delta.length();if(dist<bestDist&&dist>30&&delta.divideScalar(dist).dot(forward)>.76){best=e;bestDist=dist}}return best}
+function launchMissile(){if(paused||st.crash>0||st.ammo<=0)return;const target=lockEnemy(),m=MISSILES.find(x=>!x.active);if(!target||!m)return;
+ const forward=new THREE.Vector3(-Math.sin(st.yaw)*Math.cos(st.pitch),Math.sin(st.pitch),-Math.cos(st.yaw)*Math.cos(st.pitch));
+ const right=new THREE.Vector3(Math.cos(st.yaw),0,-Math.sin(st.yaw));
+ m.mesh.position.copy(P).addScaledVector(forward,3).addScaledVector(right,st.ammo%2?3:-3).addScaledVector(UP,-1);
+ m.heading.copy(forward);m.target=target;m.life=3.6;m.active=true;m.mesh.visible=true;st.ammo--;updateAmmo()}
+function removeMissile(m){m.active=false;m.mesh.visible=false;m.target=null}
 const UP=new THREE.Vector3(0,1,0),side=new THREE.Vector3();
 function fireOne(off){const b=BUL.find(x=>!x.active);if(!b)return;
  const cp=Math.cos(st.pitch),dir=new THREE.Vector3(-Math.sin(st.yaw)*cp,Math.sin(st.pitch),-Math.cos(st.yaw)*cp);
@@ -147,14 +170,15 @@ function enemyFire(e){const b=ENBUL.find(x=>!x.active);if(!b)return;
  b.mesh.position.copy(e.group.position).addScaledVector(d,4);b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d);
  b.vel.copy(d).multiplyScalar(300);b.life=2.5;b.active=true;b.mesh.visible=true}
 // state
-const P=new THREE.Vector3(0,320,300),st={yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0,hp:5,inv:0};
+const P=new THREE.Vector3(0,320,300),st={yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0,hp:5,inv:0,safe:0,ammo:10};
 let dir=0,drag=false,touchId=null,startX=0,startY=0,last=0,t0=0;
-function reset(){P.set(0,320,300);Object.assign(st,{yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0,hp:5,inv:2});jet.visible=!cockpit;updateArmor();$('crash').style.display='none';cam.position.set(0,326,322);EN.forEach(e=>spawnEnemy(e,P,st.yaw))}
-function start(){$('ov').style.display='none';['slow','fast','fire','thr','topbar','hud','armor','pause','view'].forEach(i=>$(i).hidden=false);reset();last=performance.now();ren.setAnimationLoop(loop)}
+function reset(){P.set(0,320,300);Object.assign(st,{yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0,hp:5,inv:2,safe:0,ammo:10});jet.visible=!cockpit;MISSILES.forEach(removeMissile);updateArmor();$('heal').textContent='';$('crash').style.display='none';cam.position.set(0,326,322);EN.forEach(e=>spawnEnemy(e,P,st.yaw));updateAmmo()}
+function start(){$('ov').style.display='none';['slow','fast','fire','missile','thr','topbar','hud','armor','pause','view'].forEach(i=>$(i).hidden=false);reset();last=performance.now();ren.setAnimationLoop(loop)}
 $('go').onclick=start;
 let cockpit=false;
-function setView(value){cockpit=value;$('cockpit').style.display=value?'block':'none';$('view').textContent=value?'▣':'◉';$('view').setAttribute('aria-label',value?'切換機尾視角':'切換座艙視角');jet.visible=!value&&st.crash<=0}
+function setView(value){cockpit=value;$('cockpit').style.display=value?'block':'none';$('view').textContent=value?'機尾':'座艙';$('view').setAttribute('aria-label',value?'切換機尾視角':'切換座艙視角');jet.visible=!value&&st.crash<=0}
 $('view').onclick=()=>setView(!cockpit);
+$('missile').addEventListener('pointerdown',e=>{e.stopPropagation();launchMissile()});
 function setPause(value){paused=value;firing=false;dir=0;drag=false;$('stick').style.display='none';$('pausePanel').style.display=value?'flex':'none';$('pause').textContent=value?'▶':'Ⅱ';last=performance.now()}
 $('pause').onclick=()=>setPause(!paused);$('resume').onclick=()=>setPause(false);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!$('hud').hidden)setPause(true)});
@@ -169,6 +193,7 @@ addEventListener('pointermove',e=>{if(drag&&e.pointerId===touchId){const dx=e.cl
 const fwd=new THREE.Vector3(),want=new THREE.Vector3(),ahead=new THREE.Vector3();
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(paused){ren.render(scene,cam);return}t0+=dt;st.inv=Math.max(0,st.inv-dt);
  if(st.crash>0){st.crash-=dt;if(st.crash<=0)reset()}else{
+  if(st.hp<5){st.safe+=dt;if(st.safe>=15){st.hp++;st.safe-=15;updateArmor();if(st.hp===5)st.safe=0}$('heal').textContent=st.hp<5?'恢復 '+Math.ceil(15-st.safe)+' 秒':''}else st.safe=0;
   st.th=cl(st.th+dir*dt*.6,.05,1);st.v+=((40+st.th*130)-st.v)*Math.min(1,dt*1.5);
   const k=Math.min(1,dt*5);st.roll+=(st.tR-st.roll)*k;st.pitch+=(st.tP-st.pitch)*k;st.yaw-=Math.sin(st.roll)*dt*1.1;
   const cp=Math.cos(st.pitch);fwd.set(-Math.sin(st.yaw)*cp,Math.sin(st.pitch),-Math.cos(st.yaw)*cp);
@@ -189,16 +214,25 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(paused){re
   if(e.group.position.y<75)e.group.position.y=75;
   if(dist>1450)spawnEnemy(e,P,st.yaw);
   e.cd-=dt;if(e.cd<=0&&st.crash<=0&&P.distanceTo(e.group.position)<650){enemyFire(e);e.cd=rr(1.4,2.8)}});
+ // guided missiles have limited steering and lifetime
+ MISSILES.forEach(m=>{if(!m.active)return;
+  m.life-=dt;if(m.life<=0||m.mesh.position.y<1){removeMissile(m);return}
+  const aim=new THREE.Vector3().subVectors(m.target.group.position,m.mesh.position),distance=aim.length();
+  m.heading.lerp(aim.normalize(),Math.min(1,dt*1.55)).normalize();m.mesh.position.addScaledVector(m.heading,290*dt);
+  m.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),m.heading);
+  if(distance<17){burst(m.target.group.position,22);score+=30;$('score').textContent='分數 '+score;popScore(30);hitTimer=.18;spawnEnemy(m.target,P,st.yaw);removeMissile(m)}
+ });
  // enemy bullets
  ENBUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
-  if(st.crash<=0&&st.inv<=0&&b.mesh.position.distanceTo(P)<9){b.active=false;b.mesh.visible=false;st.hp--;updateArmor();st.inv=1.4;$('flash').style.opacity=1;setTimeout(()=>$('flash').style.opacity=0,130);burst(P,8);if(st.hp<=0){st.crash=1.6;jet.visible=false;$('crash').textContent='遭到擊落！重新起飛中';$('crash').style.display='flex'}}});
+  if(st.crash<=0&&st.inv<=0&&b.mesh.position.distanceTo(P)<9){b.active=false;b.mesh.visible=false;st.hp--;st.safe=0;updateArmor();st.inv=1.4;$('flash').style.opacity=1;setTimeout(()=>$('flash').style.opacity=0,130);burst(P,8);if(st.hp<=0){st.crash=1.6;jet.visible=false;$('crash').textContent='遭到擊落！重新起飛中';$('crash').style.display='flex'}}});
  // bullets
  BUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
   for(const e of EN){if(b.mesh.position.distanceTo(e.group.position)<15){b.active=false;b.mesh.visible=false;score+=10;$('score').textContent='分數 '+score;burst(e.group.position,18);popScore();hitTimer=.18;spawnEnemy(e,P,st.yaw);break}}});
  for(let i=sparks.length-1;i>=0;i--){const s=sparks[i];s.life-=dt;s.mesh.position.addScaledVector(s.vel,dt);s.mesh.scale.multiplyScalar(.94);if(s.life<=0){scene.remove(s.mesh);sparks.splice(i,1)}}
  hitTimer=Math.max(0,hitTimer-dt);$('reticle').classList.toggle('hit',hitTimer>0);
+ updateAmmo();
  // camera
  if(cockpit){want.set(0,1.1,-2.2).applyEuler(new THREE.Euler(st.pitch,st.yaw,0,'YXZ')).add(P);cam.position.copy(want)}
  else{want.set(0,4.5,24+st.th*4).applyEuler(new THREE.Euler(st.pitch*.5,st.yaw,0,'YXZ')).add(P);cam.position.lerp(want,1-Math.exp(-dt*7))}
@@ -208,7 +242,7 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(paused){re
  sky.position.copy(cam.position);ocean.position.set(P.x,0,P.z);wtex.offset.set(t0*.01,t0*.015);
  clouds.forEach(c=>{if(c.position.distanceToSquared(P)>3500*3500){c.position.x=P.x+rr(-1400,1400);c.position.z=P.z+rr(-1500,-400)}});
  sun.position.copy(P).addScaledVector(SUN,300);sun.target.position.copy(P);
- $('stats').textContent=`速度 ${Math.round(st.v*3.6)} km/h　高度 ${Math.max(0,Math.round(P.y))} m`;
+ $('stats').textContent=`${Math.round(st.v*3.6)} km/h · ${Math.max(0,Math.round(P.y))} m`;
  $('thr').firstElementChild.style.width=st.th*100+'%';
  ren.render(scene,cam)}
 </script>
