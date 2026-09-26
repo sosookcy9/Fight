@@ -33,7 +33,6 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #pause{position:fixed;top:calc(env(safe-area-inset-top,0px) + 49px);right:16px;width:40px;height:40px;border:1px solid rgba(255,255,255,.6);border-radius:10px;background:rgba(11,34,62,.46);color:white;font-size:18px}
 #pausePanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:rgba(6,26,51,.65);backdrop-filter:blur(5px);font-size:27px;font-weight:700}
 #resume{padding:13px 38px;border:0;border-radius:12px;background:#ff5c5c;color:white;font-size:18px;font-weight:700}
-#markers{position:absolute;inset:0}.marker{position:absolute;width:18px;height:18px;border:1px solid #ffd188;transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 8px #ff8060;opacity:.85}.marker.near{border-color:#ff6565}
 #flash{position:fixed;inset:0;background:rgba(255,85,55,.33);opacity:0;pointer-events:none;transition:opacity .2s}
 .pop{position:absolute;color:#ffdc92;font:bold 22px ui-monospace,monospace;text-shadow:0 2px 8px #562a15;animation:pop .7s ease-out forwards}@keyframes pop{to{transform:translateY(-45px) scale(1.3);opacity:0}}
 #stick{position:fixed;width:98px;height:98px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.09);border-radius:50%;pointer-events:none;display:none;transform:translate(-50%,-50%)}#stick i{position:absolute;left:50%;top:50%;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.72);transform:translate(-50%,-50%)}
@@ -47,7 +46,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <button id="fire" hidden>射擊</button>
 <button class="btn" id="fast" hidden>加速</button>
 <div id="crash">墜海！重新起飛中</div>
-<div id="hud" hidden><div id="reticle"></div><div id="markers"></div></div>
+<div id="hud" hidden><div id="reticle"></div></div>
 <div id="armor" hidden></div><button id="pause" hidden aria-label="暫停">Ⅱ</button>
 <div id="pausePanel"><span>飛行暫停</span><button id="resume">繼續飛行</button></div><div id="flash"></div><div id="stick"><i></i></div>
 <div id="ov">
@@ -59,27 +58,30 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const $=id=>document.getElementById(id),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),rr=(a,b)=>a+Math.random()*(b-a);
-const ren=new THREE.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,1.75));ren.setSize(innerWidth,innerHeight);ren.shadowMap.enabled=true;document.body.prepend(ren.domElement);
+const ren=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+function setQuality(){const pixels=innerWidth*innerHeight;ren.setPixelRatio(Math.min(devicePixelRatio||1,pixels>1400000?1.6:2));ren.setSize(innerWidth,innerHeight)}
+setQuality();ren.outputEncoding=THREE.sRGBEncoding;ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;document.body.prepend(ren.domElement);
 const scene=new THREE.Scene();scene.fog=new THREE.Fog(0xcfeaf7,500,2600);
 const cam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.5,6000);
-addEventListener('resize',()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+addEventListener('resize',()=>{setQuality();cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
 scene.add(new THREE.HemisphereLight(0xbfe0ff,0x2a5a7a,.9));
 scene.background=new THREE.Color(0xaad6ee);
-const sun=new THREE.DirectionalLight(0xfff6da,1.2);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+const sun=new THREE.DirectionalLight(0xfff4d7,1.3);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);sun.shadow.bias=-.00015;
 Object.assign(sun.shadow.camera,{left:-90,right:90,top:90,bottom:-90,near:1,far:400});scene.add(sun,sun.target);
 const SUN=new THREE.Vector3(.35,.55,-.6).normalize();
 const sky=new THREE.Mesh(new THREE.SphereGeometry(4500,24,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,
 vertexShader:'varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-fragmentShader:'varying vec3 v;void main(){float h=max(v.y,0.);vec3 zen=vec3(.16,.48,.88),hor=vec3(.78,.9,.98);vec3 c=mix(hor,zen,pow(h,.5));c+=vec3(1.,.98,.85)*pow(max(dot(v,normalize(vec3(.35,.55,-.6))),0.),80.);gl_FragColor=vec4(c,1.);}'}));
+fragmentShader:'varying vec3 v;void main(){float h=max(v.y,0.);vec3 zen=vec3(.13,.40,.79),hor=vec3(.79,.91,.98);vec3 c=mix(hor,zen,pow(h,.62));float sun=max(dot(v,normalize(vec3(.35,.55,-.6))),0.);c+=vec3(1.,.87,.60)*pow(sun,18.)*.16;c+=vec3(1.,.98,.85)*pow(sun,450.)*.75;gl_FragColor=vec4(c,1.);}'}));
 sky.renderOrder=-1;scene.add(sky);
 function tex(fn,s,rep){const c=document.createElement('canvas');c.width=c.height=s;const g=c.getContext('2d');fn(g,s);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;if(rep)t.repeat.set(rep,rep);return t}
-const wtex=tex((g,s)=>{g.fillStyle='#1f7fb8';g.fillRect(0,0,s,s);g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=3;
- for(let k=0;k<14;k++){g.beginPath();const y=Math.random()*s;g.moveTo(0,y);for(let x=0;x<s;x+=20)g.lineTo(x,y+Math.sin(x*.05+k)*6);g.stroke()}},512,26);
-const ocean=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshLambertMaterial({map:wtex,color:0x8fc4e8}));
+const wtex=tex((g,s)=>{g.fillStyle='#246f9e';g.fillRect(0,0,s,s);
+ for(let k=0;k<90;k++){const x=rr(0,s),y=rr(0,s),len=rr(18,110);g.strokeStyle=k%3?'rgba(169,221,239,.17)':'rgba(224,245,250,.33)';g.lineWidth=rr(.5,2.2);g.beginPath();g.moveTo(x,y);g.bezierCurveTo(x+len*.25,y-rr(1,5),x+len*.7,y+rr(1,5),x+len,y);g.stroke()}},512,25);
+const ocean=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshPhongMaterial({map:wtex,bumpMap:wtex,bumpScale:.28,color:0xa4d5e9,specular:0x9fc9e0,shininess:75}));
 ocean.rotation.x=-Math.PI/2;ocean.receiveShadow=true;scene.add(ocean);
 const cloudMat=new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:.7,depthWrite:false});
 const clouds=[];for(let i=0;i<26;i++){const g=new THREE.Group();for(let j=0;j<4;j++){const puff=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),cloudMat);puff.scale.set(rr(35,65),rr(5,10),rr(16,28));puff.position.set((j-1.5)*38,rr(-3,3),rr(-10,10));g.add(puff)}g.position.set(rr(-1400,1400),rr(430,670),rr(-1600,600));scene.add(g);clouds.push(g)}
-const glint=new THREE.Mesh(new THREE.CircleGeometry(130,40),new THREE.MeshBasicMaterial({color:0xffe8ac,transparent:true,opacity:.14,depthWrite:false}));glint.rotation.x=-Math.PI/2;glint.position.y=.35;scene.add(glint);
+const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=128;const gg=glowCanvas.getContext('2d'),grad=gg.createRadialGradient(64,64,2,64,64,64);grad.addColorStop(0,'rgba(255,247,207,.42)');grad.addColorStop(.5,'rgba(255,233,171,.12)');grad.addColorStop(1,'rgba(255,233,171,0)');gg.fillStyle=grad;gg.fillRect(0,0,128,128);
+const glint=new THREE.Mesh(new THREE.PlaneGeometry(420,420),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(glowCanvas),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));glint.rotation.x=-Math.PI/2;glint.position.y=.4;scene.add(glint);
 function buildJet(cMain,cDark,cCan){
  const g=new THREE.Group(),jm=new THREE.MeshPhongMaterial({color:cMain,shininess:70,specular:0x99aacc,side:THREE.DoubleSide}),dm=new THREE.MeshPhongMaterial({color:cDark,shininess:40,side:THREE.DoubleSide});
  const add=(geo,m,x,y,z,rx=0,rz=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.set(rx,0,rz);o.castShadow=true;g.add(o);return o};
@@ -177,7 +179,6 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(paused){re
  sky.position.copy(cam.position);ocean.position.set(P.x,0,P.z);glint.position.x=P.x-250;glint.position.z=P.z-550;wtex.offset.set(t0*.01,t0*.015);
  clouds.forEach(c=>{if(c.position.distanceToSquared(P)>3500*3500){c.position.x=P.x+rr(-1400,1400);c.position.z=P.z+rr(-1500,-400)}});
  sun.position.copy(P).addScaledVector(SUN,300);sun.target.position.copy(P);
- const markers=$('markers');markers.replaceChildren();const projected=new THREE.Vector3();for(const e of EN){projected.copy(e.group.position).project(cam);if(projected.z<0||projected.z>1)continue;const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;if(x<20||x>innerWidth-20||y<65||y>innerHeight-130)continue;const m=document.createElement('span');m.className='marker'+(P.distanceTo(e.group.position)<400?' near':'');m.style.left=x+'px';m.style.top=y+'px';markers.appendChild(m)}
  $('stats').textContent=`速度 ${Math.round(st.v*3.6)} km/h　高度 ${Math.max(0,Math.round(P.y))} m`;
  $('thr').firstElementChild.style.width=st.th*100+'%';
  ren.render(scene,cam)}
