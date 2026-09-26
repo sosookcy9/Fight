@@ -31,11 +31,24 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #cross .cl{height:2px;width:7px;left:0;top:17px}#cross .cr{height:2px;width:7px;right:0;top:17px}
 #cross.chase{top:38%}
 #cockpitView{position:fixed;inset:0;display:none;pointer-events:none;z-index:1;overflow:hidden}
-#cockpitView::before{content:'';position:absolute;left:5%;top:-28px;width:90%;height:calc(100% - 105px);border:12px solid rgba(27,42,53,.94);border-bottom:0;border-radius:42% 42% 0 0 / 16% 16% 0 0;box-shadow:inset 0 0 0 3px rgba(157,205,222,.15),0 0 18px rgba(4,15,27,.35)}
-#cockpitView::after{content:'';position:absolute;left:50%;bottom:-65px;transform:translateX(-50%);width:min(112vw,960px);height:225px;border:10px solid #1b2b39;border-radius:50% 50% 0 0 / 35% 35% 0 0;background:linear-gradient(#435b67 0%,#263b4b 26%,#111e2b 85%);box-shadow:0 -8px 22px rgba(4,19,29,.55),inset 0 9px 10px rgba(202,230,235,.18)}
-#cockpitView .post{position:absolute;left:50%;bottom:132px;transform:translateX(-50%);width:22px;height:80px;border-left:5px solid #172a38;border-right:5px solid #172a38;border-radius:9px 9px 0 0;z-index:2;opacity:.85}
-#cockpitView .gauges{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);display:flex;gap:20px;z-index:2}
-#cockpitView .gauges i{width:51px;height:51px;border:4px solid #6d8590;border-radius:50%;background:radial-gradient(circle at 50% 50%,#82c8c2 0 2px,#1e3544 3px 8px,#101d2a 9px 100%);box-shadow:inset 0 0 0 2px #213945,0 2px 8px rgba(0,0,0,.7)}
+#cockpitView::before{content:'';position:absolute;left:3%;top:-35px;width:94%;height:calc(100% - 90px);border:clamp(12px,2vw,23px) solid #142538;border-bottom:0;border-radius:44% 44% 0 0 / 19% 19% 0 0;box-shadow:inset 0 0 0 4px #5b7e8d,0 0 0 3px #0b1b2e,inset 0 0 17px rgba(4,15,27,.45)}
+#cockpitView::after{content:'';position:absolute;left:50%;bottom:-125px;transform:translateX(-50%);width:115vw;height:clamp(280px,37vh,490px);border:10px solid #0c1d30;border-radius:50% 50% 0 0 / 22% 22% 0 0;background:linear-gradient(#476b80 0%,#2d4b61 12%,#182d43 60%,#101e31 100%);box-shadow:0 -8px 0 #10263a,0 -17px 22px rgba(3,18,32,.36),inset 0 8px 0 #779aab)}
+#cockpitView .side{position:absolute;bottom:43px;width:39%;height:clamp(190px,25vh,330px);z-index:2;background:#0d2035;filter:drop-shadow(0 -3px 2px #091b2e)}
+#cockpitView .side.left{left:0;clip-path:polygon(0 37%,18% 11%,100% 0,100% 100%,0 100%)}
+#cockpitView .side.right{right:0;clip-path:polygon(0 0,82% 11%,100% 37%,100% 100%,0 100%)}
+#cockpitView .side .screen{position:absolute;top:26%;left:25%;width:62%;height:42%;border:5px solid #142338;border-radius:8px;background:linear-gradient(145deg,#7acbd0,#2c748e 45%,#214b69 46%,#76c6c9);box-shadow:0 0 0 4px #526f83,inset 0 0 0 3px #b2e0de}
+#cockpitView .side.right .screen{left:13%}
+#cockpitView .side .screen::after{content:'';position:absolute;inset:25% 15%;border:2px solid rgba(202,248,231,.65);border-radius:50%}
+#cockpitView .side .keys{position:absolute;left:23%;bottom:8%;width:64%;height:12%;border-top:5px dotted #90b4bd;border-bottom:5px dotted #90b4bd;opacity:.8}
+#cockpitView .side.right .keys{left:13%}
+#cockpitView .centerConsole{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:clamp(155px,25vw,270px);height:clamp(205px,30vh,365px);z-index:3;background:#14263a;border:8px solid #07192b;border-radius:18px 18px 5px 5px;box-shadow:0 0 0 5px #52768a,inset 0 0 0 4px #2e5068}
+#cockpitView .centerConsole .screen{position:absolute;left:14%;top:16%;width:72%;height:46%;border:6px solid #071a2c;border-radius:8px;background:linear-gradient(150deg,#7dc6cf 0 35%,#34839c 36% 52%,#153c59 53%);box-shadow:0 0 0 3px #6d95a4}
+#cockpitView .centerConsole .screen::before{content:'';position:absolute;left:18%;top:30%;width:64%;height:25%;border:2px solid rgba(213,251,229,.75);border-top:0;border-radius:50%}
+#cockpitView .centerConsole .lights{position:absolute;bottom:12%;left:18%;width:64%;height:11px;background:repeating-linear-gradient(90deg,#75ccb0 0 9px,transparent 9px 19px,#e0a95e 19px 27px,transparent 27px 40px);border-radius:8px}
+#cockpitView .post{position:absolute;left:50%;bottom:calc(clamp(205px,30vh,365px) + 16px);transform:translateX(-50%);width:16px;height:68px;border-left:5px solid #0d2336;border-right:5px solid #0d2336;border-radius:7px 7px 0 0;z-index:2}
+#cockpitView .hudGlass{position:absolute;left:50%;top:50%;transform:translate(-50%,-56%);width:clamp(125px,22vw,240px);height:clamp(125px,18vh,225px);z-index:2;clip-path:polygon(17% 0,83% 0,100% 100%,0 100%);background:linear-gradient(145deg,rgba(205,248,255,.28),rgba(98,202,225,.08) 55%,rgba(126,227,230,.18));border:7px solid #19344a;box-shadow:inset 0 0 0 3px rgba(166,230,230,.5)}
+#cockpitView .hudGlass::after{content:'';position:absolute;left:26%;right:26%;top:28%;height:25%;border-top:1px solid rgba(138,244,211,.6);border-bottom:1px solid rgba(138,244,211,.4)}
+@media(max-height:600px){#cockpitView .hudGlass{height:110px;top:43%}#cockpitView .side{height:150px}#cockpitView .centerConsole{height:175px}#cockpitView .post{bottom:185px}}
 #topbar,.btn,#fire,#thr{z-index:3}
 #levelToast{position:fixed;top:25%;left:50%;transform:translate(-50%,-8px);padding:12px 22px;border:1px solid rgba(255,226,151,.7);border-radius:14px;background:rgba(17,31,54,.78);color:#ffe09d;font:700 22px -apple-system,"PingFang TC",sans-serif;white-space:nowrap;text-shadow:0 0 13px #ffb756;box-shadow:0 0 24px rgba(255,178,71,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:6}
 #levelToast.show{opacity:1;transform:translate(-50%,0)}
@@ -53,7 +66,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <body>
 <div id="topbar" hidden><div class="panel"><span id="score">分數 0</span><div id="shield"><i></i><i></i><i></i><i></i><i></i></div></div><div><div class="panel" id="stats"></div><button id="viewBtn">🎥 機外視角</button></div></div>
 <div id="cross" class="chase" hidden><i></i><b class="ct"></b><b class="cr"></b><b class="cb"></b><b class="cl"></b></div>
-<div id="cockpitView"><div class="post"></div><div class="gauges"><i></i><i></i><i></i></div></div>
+<div id="cockpitView"><div class="hudGlass"></div><div class="post"></div><div class="side left"><div class="screen"></div><div class="keys"></div></div><div class="side right"><div class="screen"></div><div class="keys"></div></div><div class="centerConsole"><div class="screen"></div><div class="lights"></div></div></div>
 <div id="levelToast" role="status" aria-live="polite"></div>
 <div id="flash"></div>
 <div id="joy"><i></i></div>
@@ -118,11 +131,15 @@ function buildJet(cMain,cDark,cCan){
 const player=buildJet(0x3a7bd8,0x1f4e99,0x162a4a);scene.add(player.group);
 const jet=player.group,fl=player.flame;
 // enemies
-const EN=[];function spawnEnemy(e,origin=new THREE.Vector3(0,320,300),yaw=0){
+const EN=[];
+function pickWaypoint(e,origin){const a=rr(-Math.PI,Math.PI),r=rr(240,680);e.waypoint.set(origin.x+Math.cos(a)*r,cl(origin.y+rr(-125,150),90,700),origin.z+Math.sin(a)*r)}
+function spawnEnemy(e,origin=new THREE.Vector3(0,320,300),yaw=0){
  const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
  e.group.position.copy(origin).addScaledVector(forward,rr(450,950)).addScaledVector(right,rr(-420,420));
  e.group.position.y=cl(origin.y+rr(-100,130),90,700);
- e.heading=new THREE.Vector3().subVectors(origin,e.group.position).normalize();e.speed=rr(95,135);e.bank=0;e.breakTime=0;e.cd=rr(1,3);e.hp=4}
+ e.heading=new THREE.Vector3().subVectors(origin,e.group.position).normalize();e.speed=rr(105,155);e.turnRate=rr(.42,.82);e.bank=0;
+ e.waypoint=new THREE.Vector3();pickWaypoint(e,origin);e.mode=Math.random()<.65?'attack':'patrol';e.modeTime=rr(3,6);
+ e.cd=rr(1.1,2.5);e.shotsLeft=0;e.shotGap=0;e.hp=4}
 for(let k=0;k<12;k++){const j=buildJet(0xe23c3c,0x9a1f1f,0x2a1010);scene.add(j.group);const e={group:j.group,flame:j.flame};spawnEnemy(e);EN.push(e)}
 // bullets
 const MATC=[0xffcf7a,0xffad5c,0xffde7a,0xff8a4b,0x9de8ff,0x62d8ff,0xd0faff].map(c=>new THREE.MeshBasicMaterial({color:c,fog:false,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false}));
@@ -152,9 +169,9 @@ const eTex=new THREE.MeshBasicMaterial({color:0xff2a4a,fog:false,transparent:tru
 const ENBUL=Array.from({length:20},()=>({mesh:new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,5,6),eTex),active:false,vel:new THREE.Vector3(),life:0}));
 ENBUL.forEach(b=>{b.mesh.visible=false;b.mesh.geometry.rotateX(Math.PI/2);scene.add(b.mesh)});
 function enemyFire(e){const b=ENBUL.find(x=>!x.active);if(!b)return;
- const d=new THREE.Vector3().subVectors(P,e.group.position).normalize();
- b.mesh.position.copy(e.group.position).addScaledVector(d,4);b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d);
- b.vel.copy(d).multiplyScalar(300);b.life=2.5;b.active=true;b.mesh.visible=true}
+ const d=e.heading.clone();b.mesh.position.copy(e.group.position).addScaledVector(d,7);
+ b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d);
+ b.vel.copy(d).multiplyScalar(370);b.life=2;b.active=true;b.mesh.visible=true}
 // state
 const P=new THREE.Vector3(0,320,300),st={yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0};
 let dir=0,drag=false,touchId=null,startX=0,startY=0,last=0,t0=0,shield=5,noHit=0;
@@ -193,17 +210,26 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;t0+=dt;
  jet.position.copy(P);jet.rotation.set(st.pitch,st.yaw,-st.roll);jet.visible=st.crash<=0&&viewMode!=='cockpit';
  const fs=.6+st.th*2.4;fl.scale.set(1,fs*(.85+Math.random()*.3),1);
  // enemies
- EN.forEach(e=>{const distance=P.distanceTo(e.group.position);if(distance<125)e.breakTime=1.7;
-  e.breakTime=Math.max(0,e.breakTime-dt);
-  const desired=e.breakTime>0?new THREE.Vector3().subVectors(e.group.position,P):new THREE.Vector3().subVectors(P,e.group.position);
-  desired.y=cl(desired.y,-110,110)*.45;desired.normalize();
-  const oldX=e.heading.x,oldZ=e.heading.z;e.heading.lerp(desired,Math.min(1,dt*(e.breakTime>0?.9:.55))).normalize();
-  e.bank+=(cl((oldX*e.heading.z-oldZ*e.heading.x)*24,-.55,.55)-e.bank)*Math.min(1,dt*4);
+ EN.forEach(e=>{const distance=P.distanceTo(e.group.position);e.modeTime-=dt;
+  if(distance<135&&e.mode!=='break'){
+   e.mode='break';e.modeTime=rr(1.5,2.3);e.waypoint.copy(e.group.position).addScaledVector(e.heading,390);
+   e.waypoint.x+=rr(-260,260);e.waypoint.y=cl(e.waypoint.y+rr(-90,110),90,700)
+  }else if(e.modeTime<=0||(e.mode==='patrol'&&e.group.position.distanceTo(e.waypoint)<95)){
+   e.mode=Math.random()<.55?'attack':'patrol';e.modeTime=rr(2.5,5.2);pickWaypoint(e,P)
+  }
+  const desired=new THREE.Vector3().subVectors(e.mode==='attack'?P:e.waypoint,e.group.position);
+  desired.y=cl(desired.y,-130,130)*.58;desired.normalize();
+  const oldX=e.heading.x,oldZ=e.heading.z;e.heading.lerp(desired,Math.min(1,dt*e.turnRate)).normalize();
+  e.bank+=(cl((oldX*e.heading.z-oldZ*e.heading.x)*32,-.7,.7)-e.bank)*Math.min(1,dt*3.5);
   e.group.position.addScaledVector(e.heading,e.speed*dt);e.group.position.y=Math.max(75,e.group.position.y);
   e.group.rotation.set(Math.asin(cl(e.heading.y,-1,1)),Math.atan2(-e.heading.x,-e.heading.z),e.bank);
   e.flame.scale.set(1,1.4+Math.random()*.3,1);
-  if(distance>1500)spawnEnemy(e,P,st.yaw);
-  e.cd-=dt;if(e.cd<=0&&st.crash<=0&&P.distanceTo(e.group.position)<650){enemyFire(e);e.cd=rr(1.4,2.8)}});
+  if(distance>1600){spawnEnemy(e,P,st.yaw);return}
+  const toward=new THREE.Vector3().subVectors(P,e.group.position),range=toward.length();
+  const linedUp=e.mode==='attack'&&range<620&&range>65&&e.heading.dot(toward.divideScalar(range))>.965;
+  if(e.shotsLeft>0){e.shotGap-=dt;if(e.shotGap<=0){if(linedUp&&st.crash<=0)enemyFire(e);e.shotsLeft--;e.shotGap=.16}}
+  else{e.cd-=dt;if(e.cd<=0){if(linedUp&&st.crash<=0){e.shotsLeft=3;e.shotGap=0}e.cd=rr(1.6,3.1)}}
+ });
  // enemy bullets
  ENBUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
