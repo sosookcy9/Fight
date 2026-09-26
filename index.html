@@ -24,6 +24,20 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #ov h1{font-size:34px;margin:0;color:#0b2a4a}
 #ov p{margin:0;line-height:1.6;font-size:16px;max-width:34ch;color:#0b2a4a}
 #go{margin-top:8px;padding:16px;border:0;border-radius:12px;background:#ff5c5c;color:#fff;font-size:18px;font-weight:700}
+#hud{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+#reticle{position:absolute;left:50%;top:45%;width:52px;height:52px;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.7);border-radius:50%;box-shadow:0 0 15px rgba(255,255,255,.25),inset 0 0 12px rgba(255,255,255,.12)}
+#reticle:before,#reticle:after{content:'';position:absolute;background:rgba(255,255,255,.85)}
+#reticle:before{width:14px;height:1px;left:18px;top:25px}#reticle:after{width:1px;height:14px;left:25px;top:18px}
+#reticle.hit{border-color:#ffc266;box-shadow:0 0 26px #ff8a3d}
+#armor{position:fixed;top:calc(env(safe-area-inset-top,0px) + 47px);left:16px;color:#ffd38d;font:700 16px ui-monospace,monospace;letter-spacing:3px;text-shadow:0 1px 6px #142d4d}
+#pause{position:fixed;top:calc(env(safe-area-inset-top,0px) + 49px);right:16px;width:40px;height:40px;border:1px solid rgba(255,255,255,.6);border-radius:10px;background:rgba(11,34,62,.46);color:white;font-size:18px}
+#pausePanel{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;background:rgba(6,26,51,.65);backdrop-filter:blur(5px);font-size:27px;font-weight:700}
+#resume{padding:13px 38px;border:0;border-radius:12px;background:#ff5c5c;color:white;font-size:18px;font-weight:700}
+#markers{position:absolute;inset:0}.marker{position:absolute;width:18px;height:18px;border:1px solid #ffd188;transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 8px #ff8060;opacity:.85}.marker.near{border-color:#ff6565}
+#flash{position:fixed;inset:0;background:rgba(255,85,55,.33);opacity:0;pointer-events:none;transition:opacity .2s}
+.pop{position:absolute;color:#ffdc92;font:bold 22px ui-monospace,monospace;text-shadow:0 2px 8px #562a15;animation:pop .7s ease-out forwards}@keyframes pop{to{transform:translateY(-45px) scale(1.3);opacity:0}}
+#stick{position:fixed;width:98px;height:98px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.09);border-radius:50%;pointer-events:none;display:none;transform:translate(-50%,-50%)}#stick i{position:absolute;left:50%;top:50%;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.72);transform:translate(-50%,-50%)}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -33,10 +47,13 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <button id="fire" hidden>射擊</button>
 <button class="btn" id="fast" hidden>加速</button>
 <div id="crash">墜海！重新起飛中</div>
+<div id="hud" hidden><div id="reticle"></div><div id="markers"></div></div>
+<div id="armor" hidden></div><button id="pause" hidden aria-label="暫停">Ⅱ</button>
+<div id="pausePanel"><span>飛行暫停</span><button id="resume">繼續飛行</button></div><div id="flash"></div><div id="stick"><i></i></div>
 <div id="ov">
 <h1>海上戰鬥機</h1>
 <p>晴空萬里，海面上的空戰。手指拖曳螢幕：左右拖＝滾轉轉彎，上下拖＝拉升／俯衝，放開回正。</p>
-<p>左下「減速」、右下「加速」控制油門，中間「射擊」擊落敵機得分。掉進海裡會重新起飛。</p>
+<p>左下「減速」、右下「加速」控制油門，中間「射擊」擊落敵機得分。三格護甲用完或墜海時會重新起飛。</p>
 <button id="go">開始飛行</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -47,6 +64,7 @@ const scene=new THREE.Scene();scene.fog=new THREE.Fog(0xcfeaf7,500,2600);
 const cam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.5,6000);
 addEventListener('resize',()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
 scene.add(new THREE.HemisphereLight(0xbfe0ff,0x2a5a7a,.9));
+scene.background=new THREE.Color(0xaad6ee);
 const sun=new THREE.DirectionalLight(0xfff6da,1.2);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
 Object.assign(sun.shadow.camera,{left:-90,right:90,top:90,bottom:-90,near:1,far:400});scene.add(sun,sun.target);
 const SUN=new THREE.Vector3(.35,.55,-.6).normalize();
@@ -59,6 +77,9 @@ const wtex=tex((g,s)=>{g.fillStyle='#1f7fb8';g.fillRect(0,0,s,s);g.strokeStyle='
  for(let k=0;k<14;k++){g.beginPath();const y=Math.random()*s;g.moveTo(0,y);for(let x=0;x<s;x+=20)g.lineTo(x,y+Math.sin(x*.05+k)*6);g.stroke()}},512,26);
 const ocean=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshLambertMaterial({map:wtex,color:0x8fc4e8}));
 ocean.rotation.x=-Math.PI/2;ocean.receiveShadow=true;scene.add(ocean);
+const cloudMat=new THREE.MeshLambertMaterial({color:0xffffff,transparent:true,opacity:.7,depthWrite:false});
+const clouds=[];for(let i=0;i<26;i++){const g=new THREE.Group();for(let j=0;j<4;j++){const puff=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),cloudMat);puff.scale.set(rr(35,65),rr(5,10),rr(16,28));puff.position.set((j-1.5)*38,rr(-3,3),rr(-10,10));g.add(puff)}g.position.set(rr(-1400,1400),rr(430,670),rr(-1600,600));scene.add(g);clouds.push(g)}
+const glint=new THREE.Mesh(new THREE.CircleGeometry(130,40),new THREE.MeshBasicMaterial({color:0xffe8ac,transparent:true,opacity:.14,depthWrite:false}));glint.rotation.x=-Math.PI/2;glint.position.y=.35;scene.add(glint);
 function buildJet(cMain,cDark,cCan){
  const g=new THREE.Group(),jm=new THREE.MeshPhongMaterial({color:cMain,shininess:70,specular:0x99aacc,side:THREE.DoubleSide}),dm=new THREE.MeshPhongMaterial({color:cDark,shininess:40,side:THREE.DoubleSide});
  const add=(geo,m,x,y,z,rx=0,rz=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.set(rx,0,rz);o.castShadow=true;g.add(o);return o};
@@ -81,7 +102,11 @@ for(let k=0;k<12;k++){const j=buildJet(0xb23a3a,0x6b2323,0x331414);scene.add(j.g
 const bTex=new THREE.MeshBasicMaterial({color:0xff6a00,fog:false,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false});
 const BUL=Array.from({length:30},()=>({mesh:new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,6,6),bTex),active:false,vel:new THREE.Vector3(),life:0}));
 BUL.forEach(b=>{b.mesh.visible=false;b.mesh.geometry.rotateX(Math.PI/2);scene.add(b.mesh)});
-let score=0,cooldown=0,firing=false;
+let score=0,cooldown=0,firing=false,paused=false,hitTimer=0;
+const sparks=[];const sparkGeo=new THREE.SphereGeometry(1,5,4),sparkMat=new THREE.MeshBasicMaterial({color:0xffb35c,transparent:true,depthWrite:false});
+function burst(pos,n=12){for(let i=0;i<n;i++){const mesh=new THREE.Mesh(sparkGeo,sparkMat);mesh.position.copy(pos);mesh.scale.setScalar(rr(.5,1.7));scene.add(mesh);sparks.push({mesh,vel:new THREE.Vector3(rr(-38,38),rr(-28,32),rr(-38,38)),life:rr(.25,.55)})}}
+function popScore(){const d=document.createElement('span');d.className='pop';d.textContent='+10';d.style.left=rr(44,56)+'%';d.style.top=rr(35,47)+'%';$('hud').appendChild(d);setTimeout(()=>d.remove(),750)}
+function updateArmor(){$('armor').textContent='護甲 '+ '◆'.repeat(st.hp)+'◇'.repeat(3-st.hp)}
 const UP=new THREE.Vector3(0,1,0),side=new THREE.Vector3();
 function fireOne(off){const b=BUL.find(x=>!x.active);if(!b)return;
  const cp=Math.cos(st.pitch),dir=new THREE.Vector3(-Math.sin(st.yaw)*cp,Math.sin(st.pitch),-Math.cos(st.yaw)*cp);
@@ -98,28 +123,31 @@ function enemyFire(e){const b=ENBUL.find(x=>!x.active);if(!b)return;
  b.mesh.position.copy(e.group.position).addScaledVector(d,4);b.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d);
  b.vel.copy(d).multiplyScalar(300);b.life=2.5;b.active=true;b.mesh.visible=true}
 // state
-const P=new THREE.Vector3(0,320,300),st={yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0};
+const P=new THREE.Vector3(0,320,300),st={yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0,hp:3,inv:0};
 let dir=0,drag=false,touchId=null,startX=0,startY=0,last=0,t0=0;
-function reset(){P.set(0,320,300);Object.assign(st,{yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0});jet.visible=true;$('crash').style.display='none';cam.position.set(0,326,322)}
-function start(){$('ov').style.display='none';['slow','fast','fire','thr','topbar'].forEach(i=>$(i).hidden=false);reset();last=performance.now();ren.setAnimationLoop(loop)}
+function reset(){P.set(0,320,300);Object.assign(st,{yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0,hp:3,inv:2});jet.visible=true;updateArmor();$('crash').style.display='none';cam.position.set(0,326,322)}
+function start(){$('ov').style.display='none';['slow','fast','fire','thr','topbar','hud','armor','pause'].forEach(i=>$(i).hidden=false);reset();last=performance.now();ren.setAnimationLoop(loop)}
 $('go').onclick=start;
+function setPause(value){paused=value;firing=false;dir=0;drag=false;$('stick').style.display='none';$('pausePanel').style.display=value?'flex':'none';$('pause').textContent=value?'▶':'Ⅱ';last=performance.now()}
+$('pause').onclick=()=>setPause(!paused);$('resume').onclick=()=>setPause(false);
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!$('hud').hidden)setPause(true)});
 const hold=(b,d)=>{b.addEventListener('pointerdown',e=>{e.stopPropagation();dir=d});['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,()=>dir=0))};hold($('fast'),1);hold($('slow'),-1);
 $('fire').addEventListener('pointerdown',e=>{e.stopPropagation();firing=true});
 ['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>firing=false));
-ren.domElement.addEventListener('pointerdown',e=>{drag=true;touchId=e.pointerId;startX=e.clientX;startY=e.clientY});
-addEventListener('pointerup',e=>{if(e.pointerId===touchId){drag=false;st.tR=0;st.tP=0}});
-addEventListener('pointercancel',()=>{drag=false;st.tR=0;st.tP=0});
+ren.domElement.addEventListener('pointerdown',e=>{if(paused)return;drag=true;touchId=e.pointerId;startX=e.clientX;startY=e.clientY;$('stick').style.cssText=`display:block;left:${startX}px;top:${startY}px`});
+addEventListener('pointerup',e=>{if(e.pointerId===touchId){drag=false;st.tR=0;st.tP=0;$('stick').style.display='none'}});
+addEventListener('pointercancel',()=>{drag=false;st.tR=0;st.tP=0;$('stick').style.display='none'});
 addEventListener('pointermove',e=>{if(drag&&e.pointerId===touchId){const dx=e.clientX-startX,dy=e.clientY-startY;
- st.tR=cl(dx/innerWidth*2.6,-1.4,1.4);st.tP=cl(-dy/innerHeight*1.7,-.87,.87)}});
+ st.tR=cl(dx/innerWidth*2.6,-1.4,1.4);st.tP=cl(-dy/innerHeight*1.7,-.87,.87);$('stick').firstElementChild.style.transform=`translate(calc(-50% + ${cl(dx,-34,34)}px),calc(-50% + ${cl(dy,-34,34)}px))`}});
 const fwd=new THREE.Vector3(),want=new THREE.Vector3(),ahead=new THREE.Vector3();
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;t0+=dt;
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(paused){ren.render(scene,cam);return}t0+=dt;st.inv=Math.max(0,st.inv-dt);
  if(st.crash>0){st.crash-=dt;if(st.crash<=0)reset()}else{
   st.th=cl(st.th+dir*dt*.6,.05,1);st.v+=((40+st.th*130)-st.v)*Math.min(1,dt*1.5);
   const k=Math.min(1,dt*5);st.roll+=(st.tR-st.roll)*k;st.pitch+=(st.tP-st.pitch)*k;st.yaw-=Math.sin(st.roll)*dt*1.1;
   const cp=Math.cos(st.pitch);fwd.set(-Math.sin(st.yaw)*cp,Math.sin(st.pitch),-Math.cos(st.yaw)*cp);
   P.addScaledVector(fwd,st.v*dt);P.y=Math.min(900,P.y);
   cooldown-=dt;if(firing&&cooldown<=0){fire();cooldown=.09}
-  if(P.y<3){st.crash=1.6;jet.visible=false;$('crash').style.display='flex'}}
+  if(P.y<3){st.crash=1.6;jet.visible=false;$('crash').textContent='墜海！重新起飛中';$('crash').style.display='flex'}}
  jet.position.copy(P);jet.rotation.set(st.pitch,st.yaw,-st.roll);
  const fs=.6+st.th*2.4;fl.scale.set(1,fs*(.85+Math.random()*.3),1);
  // enemies
@@ -128,24 +156,29 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;t0+=dt;
   e.px=x;e.py=y;e.pz=z;
   e.group.position.set(x,y,z);e.group.rotation.set(0,e.yaw,.35*Math.sign(e.speed));
   e.flame.scale.set(1,1.4+Math.random()*.3,1);
+  if(P.distanceTo(e.group.position)>1250){spawnEnemy(e);e.center.copy(P).add(new THREE.Vector3(rr(-450,450),rr(-90,130),rr(-850,-400)));e.px=null}
   e.cd-=dt;if(e.cd<=0&&st.crash<=0&&P.distanceTo(e.group.position)<650){enemyFire(e);e.cd=rr(1.4,2.8)}});
  // enemy bullets
  ENBUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
-  if(st.crash<=0&&b.mesh.position.distanceTo(P)<9){b.active=false;b.mesh.visible=false;st.crash=1.6;jet.visible=false;$('crash').style.display='flex'}});
+  if(st.crash<=0&&st.inv<=0&&b.mesh.position.distanceTo(P)<9){b.active=false;b.mesh.visible=false;st.hp--;updateArmor();st.inv=1.4;$('flash').style.opacity=1;setTimeout(()=>$('flash').style.opacity=0,130);burst(P,8);if(st.hp<=0){st.crash=1.6;jet.visible=false;$('crash').textContent='遭到擊落！重新起飛中';$('crash').style.display='flex'}}});
  // bullets
  BUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
-  for(const e of EN){if(b.mesh.position.distanceTo(e.group.position)<15){b.active=false;b.mesh.visible=false;score+=10;$('score').textContent='分數 '+score;spawnEnemy(e);break}}});
+  for(const e of EN){if(b.mesh.position.distanceTo(e.group.position)<15){b.active=false;b.mesh.visible=false;score+=10;$('score').textContent='分數 '+score;burst(e.group.position,18);popScore();hitTimer=.18;spawnEnemy(e);e.center.copy(P).add(new THREE.Vector3(rr(-400,400),rr(-100,120),rr(-900,-400)));e.px=null;break}}});
+ for(let i=sparks.length-1;i>=0;i--){const s=sparks[i];s.life-=dt;s.mesh.position.addScaledVector(s.vel,dt);s.mesh.scale.multiplyScalar(.94);if(s.life<=0){scene.remove(s.mesh);sparks.splice(i,1)}}
+ hitTimer=Math.max(0,hitTimer-dt);$('reticle').classList.toggle('hit',hitTimer>0);
  // chase cam
  want.set(0,4.5,24+st.th*4).applyEuler(new THREE.Euler(st.pitch*.5,st.yaw,0,'YXZ')).add(P);
  cam.position.lerp(want,1-Math.exp(-dt*7));
  ahead.copy(fwd.set(-Math.sin(st.yaw)*Math.cos(st.pitch),Math.sin(st.pitch),-Math.cos(st.yaw)*Math.cos(st.pitch))).multiplyScalar(40).add(P);
  cam.up.set(0,1,0);cam.lookAt(ahead);cam.rotateZ(-st.roll*.25);
  cam.fov=62+st.th*8;cam.updateProjectionMatrix();
- sky.position.copy(cam.position);ocean.position.set(P.x,0,P.z);wtex.offset.set(t0*.01,t0*.015);
+ sky.position.copy(cam.position);ocean.position.set(P.x,0,P.z);glint.position.x=P.x-250;glint.position.z=P.z-550;wtex.offset.set(t0*.01,t0*.015);
+ clouds.forEach(c=>{if(c.position.distanceToSquared(P)>3500*3500){c.position.x=P.x+rr(-1400,1400);c.position.z=P.z+rr(-1500,-400)}});
  sun.position.copy(P).addScaledVector(SUN,300);sun.target.position.copy(P);
- $('stats').textContent=`速度 ${Math.round(st.v*3.6)}　高度 ${Math.max(0,Math.round(P.y))}　航向 ${Math.round(((-st.yaw*180/Math.PI)%360+360)%360)}`;
+ const markers=$('markers');markers.replaceChildren();const projected=new THREE.Vector3();for(const e of EN){projected.copy(e.group.position).project(cam);if(projected.z<0||projected.z>1)continue;const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;if(x<20||x>innerWidth-20||y<65||y>innerHeight-130)continue;const m=document.createElement('span');m.className='marker'+(P.distanceTo(e.group.position)<400?' near':'');m.style.left=x+'px';m.style.top=y+'px';markers.appendChild(m)}
+ $('stats').textContent=`速度 ${Math.round(st.v*3.6)} km/h　高度 ${Math.max(0,Math.round(P.y))} m`;
  $('thr').firstElementChild.style.width=st.th*100+'%';
  ren.render(scene,cam)}
 </script>
