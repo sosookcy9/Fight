@@ -18,7 +18,14 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #thr i{display:block;height:100%;background:var(--amber);width:40%}
 #topbar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;pointer-events:none;text-shadow:0 0 6px #000}
 #score{color:#fff;font:700 16px ui-monospace,Menlo,monospace}
+#shield{display:flex;gap:4px;margin-top:5px}
+#shield i{width:13px;height:13px;border-radius:3px;background:#3ad1ff;box-shadow:0 0 4px #3ad1ff;display:block}
+#shield i.off{background:rgba(255,255,255,.18);box-shadow:none}
 #stats{color:var(--amber);font:600 13px ui-monospace,Menlo,monospace;text-align:right}
+#flash{position:fixed;inset:0;background:#ff3050;opacity:0;pointer-events:none;transition:opacity .08s}
+#joy{position:fixed;width:96px;height:96px;border-radius:50%;border:2px solid rgba(255,194,102,.5);pointer-events:none;display:none}
+#joy i{position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(255,194,102,.55);left:28px;top:28px;transition:left .05s,top .05s}
+.pop{position:fixed;color:#fff;font:700 16px ui-monospace,Menlo,monospace;text-shadow:0 0 6px #000;pointer-events:none;transition:transform .8s ease-out,opacity .8s ease-out;z-index:5}
 #crash{position:fixed;inset:0;background:rgba(255,80,50,.4);display:none;align-items:center;justify-content:center;font-size:28px;font-weight:700}
 #ov{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:32px;background:linear-gradient(#2e7bc9,#bfe4f5 65%,#eaf7ff);gap:14px}
 #ov h1{font-size:34px;margin:0;color:#0b2a4a}
@@ -27,7 +34,9 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 </style>
 </head>
 <body>
-<div id="topbar" hidden><span id="score">分數 0</span><span id="stats"></span></div>
+<div id="topbar" hidden><div><span id="score">分數 0</span><div id="shield"><i></i><i></i><i></i><i></i><i></i></div></div><span id="stats"></span></div>
+<div id="flash"></div>
+<div id="joy"><i></i></div>
 <div id="thr" hidden><i></i></div>
 <button class="btn" id="slow" hidden>減速</button>
 <button id="fire" hidden>射擊</button>
@@ -36,7 +45,7 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 <div id="ov">
 <h1>海上戰鬥機</h1>
 <p>晴空萬里，海面上的空戰。手指拖曳螢幕：左右拖＝滾轉轉彎，上下拖＝拉升／俯衝，放開回正。</p>
-<p>左下「減速」、右下「加速」控制油門，中間「射擊」擊落敵機得分。每擊落 5 架機槍會升級。掉進海裡會重新起飛。</p>
+<p>左下「減速」、右下「加速」控制油門，中間「射擊」擊落敵機得分。每擊落 5 架機槍會升級。你有 5 格護盾，被擊中會扣一格，連續 8 秒沒被打中會回一格。護盾歸零或掉進海裡會重新起飛。</p>
 <button id="go">開始飛行</button>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -61,6 +70,15 @@ const wtex=tex((g,s)=>{g.fillStyle='#1fb6c9';g.fillRect(0,0,s,s);g.fillStyle='#7
  for(let k=0;k<9;k++){const x=Math.random()*s,y=Math.random()*s,r=18+Math.random()*36;g.beginPath();g.arc(x,y,r,0,7);g.fill()}},512,20);
 const ocean=new THREE.Mesh(new THREE.PlaneGeometry(20000,20000),new THREE.MeshToonMaterial({map:wtex,color:0xbfeee8,gradientMap:toonGrad}));
 ocean.rotation.x=-Math.PI/2;ocean.receiveShadow=true;scene.add(ocean);
+const cloudMat=new THREE.MeshToonMaterial({color:0xffffff,gradientMap:toonGrad});
+const CLOUDS=[];function placeCloud(c,ox,oz){c.position.set((ox||0)+rr(-1200,1200),rr(350,700),(oz||0)+rr(-1600,400))}
+for(let k=0;k<12;k++){const g=new THREE.Group();for(let m=0;m<4;m++){const s=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),cloudMat);s.scale.set(rr(30,55),rr(20,30),rr(30,55));s.position.set(rr(-25,25),rr(-6,6),rr(-20,20));g.add(s)}placeCloud(g,0,0);scene.add(g);CLOUDS.push(g)}
+const expTex=tex((g,s)=>{const r=g.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);r.addColorStop(0,'#fff6c8');r.addColorStop(.4,'#ffb03c');r.addColorStop(1,'rgba(255,60,20,0)');g.fillStyle=r;g.fillRect(0,0,s,s)},128);
+const EXP=Array.from({length:12},()=>{const m=new THREE.Sprite(new THREE.SpriteMaterial({map:expTex,transparent:true,depthWrite:false,fog:false}));m.visible=false;scene.add(m);return{mesh:m,life:0}});
+function explode(pos){const e=EXP.find(x=>x.life<=0);if(!e)return;e.mesh.position.copy(pos);e.mesh.visible=true;e.mesh.material.opacity=1;e.life=.45}
+function popup(text,pos){const v=pos.clone().project(cam);const x=(v.x*.5+.5)*innerWidth,y=(-v.y*.5+.5)*innerHeight;
+ const el=document.createElement('div');el.className='pop';el.textContent=text;el.style.left=x+'px';el.style.top=y+'px';document.body.appendChild(el);
+ requestAnimationFrame(()=>{el.style.transform='translateY(-40px)';el.style.opacity='0'});setTimeout(()=>el.remove(),850)}
 function buildJet(cMain,cDark,cCan){
  const g=new THREE.Group(),jm=new THREE.MeshToonMaterial({color:cMain,gradientMap:toonGrad}),dm=new THREE.MeshToonMaterial({color:cDark,gradientMap:toonGrad});
  const add=(geo,m,x,y,z,rx=0,rz=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.set(rx,0,rz);o.castShadow=true;outline(o);g.add(o);return o};
@@ -103,18 +121,24 @@ function enemyFire(e){const b=ENBUL.find(x=>!x.active);if(!b)return;
  b.vel.copy(d).multiplyScalar(300);b.life=2.5;b.active=true;b.mesh.visible=true}
 // state
 const P=new THREE.Vector3(0,320,300),st={yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0};
-let dir=0,drag=false,touchId=null,startX=0,startY=0,last=0,t0=0;
-function reset(){P.set(0,320,300);Object.assign(st,{yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0});jet.visible=true;$('crash').style.display='none';cam.position.set(0,326,322)}
+let dir=0,drag=false,touchId=null,startX=0,startY=0,last=0,t0=0,shield=5,noHit=0;
+const joy=$('joy'),joyKnob=joy.firstElementChild,shieldEl=$('shield');
+function updateShield(){[...shieldEl.children].forEach((el,i)=>el.classList.toggle('off',i>=shield))}
+function hitPlayer(){if(st.crash>0)return;shield--;noHit=0;updateShield();$('flash').style.opacity=.55;setTimeout(()=>$('flash').style.opacity=0,90);
+ if(shield<=0){st.crash=1.6;jet.visible=false;$('crash').style.display='flex'}}
+function reset(){P.set(0,320,300);Object.assign(st,{yaw:0,pitch:0,roll:0,v:70,th:.4,crash:0,tR:0,tP:0});jet.visible=true;$('crash').style.display='none';cam.position.set(0,326,322);shield=5;noHit=0;updateShield()}
 function start(){$('ov').style.display='none';['slow','fast','fire','thr','topbar'].forEach(i=>$(i).hidden=false);reset();last=performance.now();ren.setAnimationLoop(loop)}
 $('go').onclick=start;
 const hold=(b,d)=>{b.addEventListener('pointerdown',e=>{e.stopPropagation();dir=d});['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,()=>dir=0))};hold($('fast'),1);hold($('slow'),-1);
 $('fire').addEventListener('pointerdown',e=>{e.stopPropagation();firing=true});
 ['pointerup','pointercancel','pointerleave'].forEach(t=>$('fire').addEventListener(t,()=>firing=false));
-ren.domElement.addEventListener('pointerdown',e=>{drag=true;touchId=e.pointerId;startX=e.clientX;startY=e.clientY});
-addEventListener('pointerup',e=>{if(e.pointerId===touchId){drag=false;st.tR=0;st.tP=0}});
-addEventListener('pointercancel',()=>{drag=false;st.tR=0;st.tP=0});
+ren.domElement.addEventListener('pointerdown',e=>{drag=true;touchId=e.pointerId;startX=e.clientX;startY=e.clientY;
+ joy.style.left=(startX-48)+'px';joy.style.top=(startY-48)+'px';joy.style.display='block';joyKnob.style.left='28px';joyKnob.style.top='28px'});
+addEventListener('pointerup',e=>{if(e.pointerId===touchId){drag=false;st.tR=0;st.tP=0;joy.style.display='none'}});
+addEventListener('pointercancel',()=>{drag=false;st.tR=0;st.tP=0;joy.style.display='none'});
 addEventListener('pointermove',e=>{if(drag&&e.pointerId===touchId){const dx=e.clientX-startX,dy=e.clientY-startY;
- st.tR=cl(dx/innerWidth*2.6,-1.4,1.4);st.tP=cl(-dy/innerHeight*1.7,-.87,.87)}});
+ st.tR=cl(dx/innerWidth*2.6,-1.4,1.4);st.tP=cl(-dy/innerHeight*1.7,-.87,.87);
+ const kd=Math.min(34,Math.hypot(dx,dy)),ang=Math.atan2(dy,dx);joyKnob.style.left=(28+Math.cos(ang)*kd)+'px';joyKnob.style.top=(28+Math.sin(ang)*kd)+'px'}});
 const fwd=new THREE.Vector3(),want=new THREE.Vector3(),ahead=new THREE.Vector3();
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;t0+=dt;
  if(st.crash>0){st.crash-=dt;if(st.crash<=0)reset()}else{
@@ -123,7 +147,10 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;t0+=dt;
   const cp=Math.cos(st.pitch);fwd.set(-Math.sin(st.yaw)*cp,Math.sin(st.pitch),-Math.cos(st.yaw)*cp);
   P.addScaledVector(fwd,st.v*dt);P.y=Math.min(900,P.y);
   cooldown-=dt;if(firing&&cooldown<=0){fire();cooldown=LV[lvl-1].cd}
+  noHit+=dt;if(noHit>=8&&shield<5){shield++;noHit=0;updateShield()}
   if(P.y<3){st.crash=1.6;jet.visible=false;$('crash').style.display='flex'}}
+ CLOUDS.forEach(c=>{if(Math.hypot(c.position.x-P.x,c.position.z-P.z)>1800)placeCloud(c,P.x,P.z)});
+ EXP.forEach(e=>{if(e.life<=0)return;e.life-=dt;const t=1-e.life/.45;e.mesh.scale.setScalar(6+t*34);e.mesh.material.opacity=1-t;if(e.life<=0)e.mesh.visible=false});
  jet.position.copy(P);jet.rotation.set(st.pitch,st.yaw,-st.roll);
  const fs=.6+st.th*2.4;fl.scale.set(1,fs*(.85+Math.random()*.3),1);
  // enemies
@@ -136,12 +163,13 @@ function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;t0+=dt;
  // enemy bullets
  ENBUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
-  if(st.crash<=0&&b.mesh.position.distanceTo(P)<9){b.active=false;b.mesh.visible=false;st.crash=1.6;jet.visible=false;$('crash').style.display='flex'}});
+  if(st.crash<=0&&b.mesh.position.distanceTo(P)<9){b.active=false;b.mesh.visible=false;hitPlayer()}});
  // bullets
  BUL.forEach(b=>{if(!b.active)return;b.mesh.position.addScaledVector(b.vel,dt);b.life-=dt;
   if(b.life<=0||b.mesh.position.y<0){b.active=false;b.mesh.visible=false;return}
   for(const e of EN){if(b.mesh.position.distanceTo(e.group.position)<15){b.active=false;b.mesh.visible=false;score+=10;kills++;checkLevel();
-   const splash=LV[lvl-1].splash;if(splash)EN.forEach(o=>{if(o!==e&&o.group.position.distanceTo(e.group.position)<splash){score+=10;kills++;checkLevel();spawnEnemy(o)}});
+   explode(e.group.position);popup('+10',e.group.position);
+   const splash=LV[lvl-1].splash;if(splash)EN.forEach(o=>{if(o!==e&&o.group.position.distanceTo(e.group.position)<splash){score+=10;kills++;checkLevel();explode(o.group.position);popup('+10',o.group.position);spawnEnemy(o)}});
    $('score').textContent='分數 '+score;spawnEnemy(e);break}}});
  // chase cam
  want.set(0,4.5,24+st.th*4).applyEuler(new THREE.Euler(st.pitch*.5,st.yaw,0,'YXZ')).add(P);
