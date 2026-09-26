@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>城市戰鬥機</title>
+<style>
+:root{box-sizing:border-box;--amber:#ffc266;--ink:#0b0d1a}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0b0d1a;overflow:hidden;overscroll-behavior:none;font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+.btn{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:76px;height:76px;border-radius:50%;border:2px solid var(--amber);background:rgba(11,13,26,.7);color:var(--amber);font-size:15px;font-weight:600}
+.btn:active{background:var(--amber);color:var(--ink)}
+#slow{left:16px}#fast{right:16px}
+#cal{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,194,102,.6);background:rgba(11,13,26,.6);color:var(--amber);font-size:13px}
+#gear{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,194,102,.6);background:rgba(11,13,26,.6);color:var(--amber);font-size:13px}
+#gear.up{opacity:.55}
+#hud{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);text-align:center;color:var(--amber);font:600 19px ui-monospace,Menlo,monospace;text-shadow:0 0 6px #000}
+#hud small{display:block;font:11px sans-serif;opacity:.75}
+#hud span{display:inline-block;width:56px}
+#bar{width:110px;height:5px;background:rgba(255,194,102,.25);margin:8px auto 0}
+#bar i{display:block;height:100%;background:var(--amber)}
+#crash{position:fixed;inset:0;background:rgba(255,80,50,.4);display:none;align-items:center;justify-content:center;font-size:26px;font-weight:700;text-align:center;padding:20px}
+#ov{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;padding:32px;background:linear-gradient(#1a1c3d,#5a3a5e 70%,#ff9a5c);gap:14px}
+#ov h1{font-size:34px;margin:0}
+#ov p{margin:0;line-height:1.6;font-size:16px;max-width:34ch}
+#go{margin-top:8px;padding:16px;border:0;border-radius:12px;background:var(--amber);color:var(--ink);font-size:18px;font-weight:700}
+</style>
+</head>
+<body>
+<button id="cal" hidden>重設水平</button>
+<button id="gear" hidden>起落架：放下</button>
+<button class="btn" id="slow" hidden>減速</button>
+<button class="btn" id="fast" hidden>加速</button>
+<div id="hud" hidden><span id="sp"></span><span id="al"></span><span id="vs"></span><span id="hd"></span><span id="of"></span><small>速度　高度　升降　航向　偏移</small><div id="bar"><i id="th"></i></div></div>
+<div id="crash">墜毀！重新開始</div>
+<div id="ov">
+<h1>城市戰鬥機</h1>
+<p>從跑道起飛，繞城市一圈後降落。<br>手機直立拿好，左右傾斜＝滾轉轉彎，上下傾斜＝拉升／俯衝。<br>左下「減速」、右下「加速」控制油門。</p>
+<p style="font-size:14px;opacity:.85"><b>起飛</b>：加速到時速夠快後，手機向後仰拉起機頭離地。<br><b>降落</b>：對準跑道、放下起落架、降低速度緩緩下降接地，太快太陡或偏出跑道會墜毀。</p>
+<p style="font-size:14px;opacity:.85">請鎖定直向。沒有陀螺儀時，可用手指拖曳操控。</p>
+<button id="go">開始飛行（啟用陀螺儀）</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=(i,j,k)=>{const s=Math.sin(i*127.1+j*311.7+k*74.7)*43758.5453;return s-Math.floor(s)};
+const C=24,S=60,HALF=C*S/2,FOG=0xb8686c;
+const ren=new THREE.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,1.75));ren.setSize(innerWidth,innerHeight);ren.shadowMap.enabled=true;document.body.prepend(ren.domElement);
+const scene=new THREE.Scene();scene.fog=new THREE.Fog(FOG,250,1100);
+const cam=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.5,4500);
+addEventListener('resize',()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+// lights
+scene.add(new THREE.HemisphereLight(0x9a86c0,0x3a2a4a,.85));
+const sun=new THREE.DirectionalLight(0xffa860,1.1);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+Object.assign(sun.shadow.camera,{left:-90,right:90,top:90,bottom:-90,near:1,far:400});scene.add(sun,sun.target);
+const SUN=new THREE.Vector3(.3,.35,-1).normalize();
+// sky
+const sky=new THREE.Mesh(new THREE.SphereGeometry(3500,24,16),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,
+vertexShader:'varying vec3 v;void main(){v=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+fragmentShader:'varying vec3 v;void main(){float h=v.y;vec3 f=vec3(.72,.41,.42),o=vec3(1.,.6,.36),m=vec3(.35,.23,.37),t=vec3(.1,.11,.24);vec3 c=mix(f,o,smoothstep(0.,.05,h));c=mix(c,m,smoothstep(.05,.3,h));c=mix(c,t,smoothstep(.3,.9,h));c=mix(f,c,step(0.,h));c+=vec3(1.,.72,.4)*pow(max(dot(v,normalize(vec3(.3,.1,-1.))),0.),30.);gl_FragColor=vec4(c,1.);}'}));
+sky.renderOrder=-1;scene.add(sky);
+// textures
+function tex(fn,s,rep){const c=document.createElement('canvas');c.width=c.height=s;const g=c.getContext('2d');fn(g,s);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;if(rep)t.repeat.set(rep,rep);return t}
+const wr=(g,s,lit)=>{for(let a=0;a<4;a++)for(let b=0;b<4;b++){const on=lit?rnd(a,b,9+Math.floor(Math.random()*4))>.45:false;const x=a*s/4+s*.07,y=b*s/4+s*.09;if(lit){if(on){g.fillStyle=Math.random()<.7?'#ffc46e':'#fff0c8';g.fillRect(x,y,s*.11,s*.13)}}else{g.fillStyle='#3a4468';g.fillRect(x,y,s*.11,s*.13)}}};
+const facade=tex((g,s)=>{g.fillStyle='#fff';g.fillRect(0,0,s,s);wr(g,s,0)},128);
+const glow=tex((g,s)=>{g.fillStyle='#000';g.fillRect(0,0,s,s);for(let a=0;a<4;a++)for(let b=0;b<4;b++)if(Math.random()>.45){g.fillStyle=Math.random()<.7?'#ffc46e':'#fff0c8';g.fillRect(a*s/4+s*.07,b*s/4+s*.09,s*.11,s*.13)}},128);
+const gtex=tex((g,s)=>{g.fillStyle='#181b33';g.fillRect(0,0,s,s);const k=s/C;g.fillStyle='#2b3052';for(let i=0;i<=C;i++){g.fillRect(i*k-5,0,10,s);g.fillRect(0,i*k-5,s,10)}g.fillStyle='#c9904a';for(let i=0;i<=C;i++)for(let d=0;d<s;d+=22){g.fillRect(i*k-1,d,2,10);g.fillRect(d,i*k-1,10,2)}},1024,3);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(HALF*6,HALF*6),new THREE.MeshLambertMaterial({map:gtex}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+// city
+const D=[],pos=[],nor=[],uv=[],col=[],idx=[];
+function quad(p,n,u,c){const o=pos.length/3;p.forEach((v,i)=>{pos.push(...v);nor.push(...n);uv.push(...u[i]);col.push(...c)});idx.push(o,o+1,o+2,o,o+2,o+3)}
+const RW_HALF=45;
+for(let i=0;i<C;i++)for(let j=0;j<C;j++){if(i===11||i===12)continue;if(rnd(i,j,0)<.12)continue;
+ const cx=(i+.5)*S-HALF,cz=(j+.5)*S-HALF,d=Math.hypot(i-11.5,j-11.5),r=rnd(i,j,1),l=rnd(i,j,3);
+ const h=20+r*r*150*(.5+Math.max(0,1-d/17)*1.1),w=11+rnd(i,j,2)*8;D[i*C+j]={x:cx,z:cz,h,w};
+ const c=[.55+.2*l,.58+.2*l,.75+.2*l],x0=cx-w,x1=cx+w,z0=cz-w,z1=cz+w,uu=w*2/16,vv=h/16;
+ quad([[x0,0,z0],[x1,0,z0],[x1,h,z0],[x0,h,z0]],[0,0,-1],[[0,0],[uu,0],[uu,vv],[0,vv]],c);
+ quad([[x1,0,z0],[x1,0,z1],[x1,h,z1],[x1,h,z0]],[1,0,0],[[0,0],[uu,0],[uu,vv],[0,vv]],c);
+ quad([[x1,0,z1],[x0,0,z1],[x0,h,z1],[x1,h,z1]],[0,0,1],[[0,0],[uu,0],[uu,vv],[0,vv]],c);
+ quad([[x0,0,z1],[x0,0,z0],[x0,h,z0],[x0,h,z1]],[-1,0,0],[[0,0],[uu,0],[uu,vv],[0,vv]],c);
+ quad([[x0,h,z0],[x1,h,z0],[x1,h,z1],[x0,h,z1]],[0,1,0],[[.01,.01],[.01,.01],[.01,.01],[.01,.01]],c.map(v=>v*.8))}
+const bg=new THREE.BufferGeometry();
+bg.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));bg.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3));
+bg.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));bg.setAttribute('color',new THREE.Float32BufferAttribute(col,3));bg.setIndex(idx);
+const bm=new THREE.MeshLambertMaterial({vertexColors:true,map:facade,emissive:0xffffff,emissiveMap:glow,emissiveIntensity:.95});
+const tile=new THREE.Group(),bmesh=new THREE.Mesh(bg,bm);bmesh.receiveShadow=true;tile.add(bmesh);
+const rtex=tex((g,s)=>{g.fillStyle='#33363f';g.fillRect(0,0,s,s);g.fillStyle='#484c58';g.fillRect(s*.03,0,s*.02,s);g.fillRect(s*.95,0,s*.02,s);g.fillStyle='#e8dcc0';for(let y=0;y<s;y+=s/9)g.fillRect(s*.48,y,s*.04,s/18)},128,1);
+rtex.repeat.set(1,C*3);rtex.needsUpdate=true;
+const rway=new THREE.Mesh(new THREE.PlaneGeometry(RW_HALF*2,S*C),new THREE.MeshLambertMaterial({map:rtex}));rway.rotation.x=-Math.PI/2;rway.position.y=.06;rway.receiveShadow=true;tile.add(rway);
+const cm=new THREE.MeshLambertMaterial({color:0xe8c8c8,emissive:0x6a4a5a,transparent:true,opacity:.85});
+for(let k=0;k<10;k++){const g=new THREE.Group(),bx=(rnd(k,1,5)-.5)*1300,bz=(rnd(k,2,5)-.5)*1300,by=420+rnd(k,3,5)*120;
+ for(let m=0;m<5;m++){const s=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),cm);s.scale.set(50+rnd(k,m,6)*50,16+rnd(k,m,7)*12,40+rnd(k,m,8)*30);s.position.set(bx+(m-2)*55,by+rnd(k,m,4)*14,bz+rnd(m,k,3)*30);g.add(s)}tile.add(g)}
+for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const t=tile.clone();t.position.set(a*2*HALF,0,b*2*HALF);scene.add(t)}
+// jet
+const jet=new THREE.Group(),jm=new THREE.MeshPhongMaterial({color:0x8f98ad,shininess:70,specular:0x8899bb,side:THREE.DoubleSide}),dm=new THREE.MeshPhongMaterial({color:0x4b546b,shininess:40,side:THREE.DoubleSide});
+const add=(g,m,x,y,z,rx=0,rz=0)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;o.castShadow=true;jet.add(o);return o};
+add(new THREE.CylinderGeometry(.75,1.05,10,12),jm,0,0,1,-Math.PI/2);
+add(new THREE.ConeGeometry(.75,4.5,12),jm,0,0,-6.2,-Math.PI/2);
+const can=add(new THREE.SphereGeometry(.7,10,8),new THREE.MeshPhongMaterial({color:0x223a66,shininess:120,specular:0xffffff}),0,.85,-2);can.scale.set(1,.75,2.4);
+const sh=new THREE.Shape();sh.moveTo(0,-3);sh.lineTo(7,3);sh.lineTo(7,5);sh.lineTo(0,5);
+const wg=new THREE.ExtrudeGeometry(sh,{depth:.25,bevelEnabled:false});
+const w1=add(wg,dm,0,0,0,Math.PI/2),w2=add(wg,dm,0,0,0,Math.PI/2);w2.scale.x=-1;
+const s1=add(wg,dm,0,0,3.5,Math.PI/2),s2=add(wg,dm,0,0,3.5,Math.PI/2);s1.scale.set(.4,.4,.4);s2.scale.set(-.4,.4,.4);
+add(new THREE.BoxGeometry(.15,3,2.6),jm,1,1.8,4.2,0,-.28);add(new THREE.BoxGeometry(.15,3,2.6),jm,-1,1.8,4.2,0,.28);
+const fl=new THREE.Mesh(new THREE.ConeGeometry(.75,1,10).translate(0,.5,0),new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:.85,fog:false}));fl.rotation.x=Math.PI/2;fl.position.z=6;jet.add(fl);
+const gearGrp=new THREE.Group(),wm=new THREE.MeshPhongMaterial({color:0x1a1c22}),lm=new THREE.MeshPhongMaterial({color:0x9aa0ae});
+function leg(x,z,h){const g=new THREE.Group();const strut=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,h,6),lm);strut.position.y=-h/2;g.add(strut);
+ const w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.28,12),wm);w.rotation.z=Math.PI/2;w.position.y=-h;g.add(w);g.position.set(x,1,z);gearGrp.add(g)}
+leg(0,-4.4,1.15);leg(1.5,.6,1.55);leg(-1.5,.6,1.55);jet.add(gearGrp);
+jet.rotation.order='YXZ';scene.add(jet);
+// state
+const STALL=42,ROTATE=50;
+const P=new THREE.Vector3(0,0,600),st={yaw:0,pitch:0,roll:0,v:0,th:.05,crash:0,tR:0,tP:0,onGround:true,gearDown:true};
+let gyro=false,b0=null,g0=0,lb=0,lg=0,dir=0,drag=false,last=0;
+function reset(){P.set(0,0,600);Object.assign(st,{yaw:0,pitch:0,roll:0,v:0,th:.05,crash:0,tR:0,tP:0,onGround:true,gearDown:true});
+ jet.visible=true;gearGrp.visible=true;$('gear').textContent='起落架：放下';$('gear').classList.remove('up');$('crash').style.display='none';cam.position.set(0,4.5,624)}
+function crash(msg){st.crash=1.6;jet.visible=false;$('crash').textContent=msg;$('crash').style.display='flex'}
+async function start(){
+ try{if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)await DeviceOrientationEvent.requestPermission()}catch(e){}
+ addEventListener('deviceorientation',e=>{if(e.beta==null||e.gamma==null)return;lb=e.beta;lg=e.gamma;if(b0===null){b0=lb;g0=lg}gyro=true;
+  st.tR=cl((lg-g0)*1.6,-80,80)*Math.PI/180;st.tP=cl((lb-b0)*.9,-50,50)*Math.PI/180});
+ $('ov').style.display='none';['cal','gear','slow','fast','hud'].forEach(i=>$(i).hidden=false);reset();last=performance.now();ren.setAnimationLoop(loop)}
+$('go').onclick=start;$('cal').onclick=()=>{b0=lb;g0=lg};
+$('gear').onclick=()=>{st.gearDown=!st.gearDown;gearGrp.visible=st.gearDown;$('gear').textContent='起落架：'+(st.gearDown?'放下':'收起');$('gear').classList.toggle('up',!st.gearDown)};
+const hold=(b,d)=>{b.addEventListener('pointerdown',e=>{e.stopPropagation();dir=d});['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,()=>dir=0))};hold($('fast'),1);hold($('slow'),-1);
+ren.domElement.addEventListener('pointerdown',()=>{if(!gyro)drag=true});
+addEventListener('pointerup',()=>{if(!gyro){drag=false;st.tR=0;st.tP=0}});
+addEventListener('pointermove',e=>{if(!gyro&&drag){st.tR=((e.clientX/innerWidth)-.5)*2*1.4;st.tP=-((e.clientY/innerHeight)-.5)*2*.87}});
+const fwd=new THREE.Vector3(),want=new THREE.Vector3(),ahead=new THREE.Vector3();
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+ if(st.crash>0){st.crash-=dt;if(st.crash<=0)reset()}else{
+  const tgtV=st.onGround?st.th*160:(40+st.th*130);
+  st.th=cl(st.th+dir*dt*.6,.05,1);st.v+=(tgtV-st.v)*Math.min(1,dt*(st.onGround?2.2:1.5));
+  const k=Math.min(1,dt*5);
+  if(st.onGround){
+   st.roll*=Math.max(0,1-k*2);st.pitch*=Math.max(0,1-k*2);
+   st.yaw-=cl(st.tR,-1,1)*dt*.5;
+   fwd.set(-Math.sin(st.yaw),0,-Math.cos(st.yaw));P.addScaledVector(fwd,st.v*dt);P.y=0;
+   if(st.v>=ROTATE&&st.tP>.12)st.onGround=false;
+  }else{
+   st.roll+=(st.tR-st.roll)*k;st.pitch+=(st.tP-st.pitch)*k;st.yaw-=Math.sin(st.roll)*dt*1.1;
+   const stallDrop=st.v<STALL?(STALL-st.v)*.02:0,cp=Math.cos(st.pitch);
+   fwd.set(-Math.sin(st.yaw)*cp,Math.sin(st.pitch)-stallDrop,-Math.cos(st.yaw)*cp);
+   P.addScaledVector(fwd,st.v*dt);P.y=Math.min(650,P.y);
+  }
+  let dx=0,dz=0;if(P.x>HALF)dx=-2*HALF;if(P.x<-HALF)dx=2*HALF;if(P.z>HALF)dz=-2*HALF;if(P.z<-HALF)dz=2*HALF;
+  if(dx||dz){P.x+=dx;P.z+=dz;cam.position.x+=dx;cam.position.z+=dz}
+  if(!st.onGround){
+   if(P.y<4){
+    const vs=fwd.y*st.v,onRwy=Math.abs(P.x)<RW_HALF-3,level=Math.abs(st.roll)<.18&&Math.abs(st.pitch)<.25;
+    if(onRwy&&st.gearDown&&vs>-9&&level){st.onGround=true;P.y=0;st.pitch=0;st.roll=0}
+    else crash('墜毀！重新開始')
+   }else{const i=Math.floor((P.x+HALF)/S),j=Math.floor((P.z+HALF)/S),b=D[i*C+j];
+    if(b&&Math.abs(P.x-b.x)<b.w+3&&Math.abs(P.z-b.z)<b.w+3&&P.y<b.h+1)crash('墜毀！重新開始')}}}
+ jet.position.copy(P);jet.rotation.set(st.pitch,st.yaw,-st.roll);
+ const fs=.6+st.th*2.4;fl.scale.set(1,fs*(.85+Math.random()*.3),1);
+ // chase cam
+ want.set(0,4.5,24+st.th*4).applyEuler(new THREE.Euler(st.pitch*.5,st.yaw,0,'YXZ')).add(P);
+ cam.position.lerp(want,1-Math.exp(-dt*7));
+ ahead.copy(fwd.set(-Math.sin(st.yaw)*Math.cos(st.pitch),Math.sin(st.pitch),-Math.cos(st.yaw)*Math.cos(st.pitch))).multiplyScalar(40).add(P);
+ cam.up.set(0,1,0);cam.lookAt(ahead);cam.rotateZ(-st.roll*.25);
+ cam.fov=62+st.th*8;cam.updateProjectionMatrix();
+ sky.position.copy(cam.position);
+ sun.position.copy(P).addScaledVector(SUN,200);sun.target.position.copy(P);
+ $('sp').textContent=Math.round(st.v*3.6);$('al').textContent=Math.max(0,Math.round(P.y));
+ $('vs').textContent=(fwd.y*st.v>=0?'+':'')+Math.round(fwd.y*st.v);
+ $('hd').textContent=Math.round(((-st.yaw*180/Math.PI)%360+360)%360);
+ $('of').textContent=(P.x>=0?'+':'')+Math.round(P.x);
+ $('th').style.width=st.th*100+'%';
+ ren.render(scene,cam)}
+</script>
+</body>
+</html>
